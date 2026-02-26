@@ -1,0 +1,299 @@
+\documentclass[11pt]{article}
+
+% ---------- Page ----------
+\usepackage[margin=1in]{geometry}
+
+% ---------- Fonts (XeLaTeX/LuaLaTeX only) ----------
+\usepackage{fontspec}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}   % clean, modern LaTeX font
+
+
+% ---------- Typography ----------
+\usepackage{microtype}
+\usepackage{setspace}
+\setstretch{1.08}
+\usepackage{inconsolata}
+% ---------- Links ----------
+\usepackage[hidelinks]{hyperref}
+
+% ---------- Colors ----------
+\usepackage{xcolor}
+\definecolor{ink}{HTML}{111827}      % slate-900
+\definecolor{sub}{HTML}{374151}      % slate-700
+\definecolor{muted}{HTML}{6B7280}    % slate-500
+\definecolor{line}{HTML}{E5E7EB}     % slate-200
+\definecolor{panel}{HTML}{F9FAFB}    % slate-50
+\definecolor{accent}{HTML}{2563EB}   % blue-600
+\definecolor{codebg}{HTML}{111827}   % dark slate for code background
+
+% ---------- Headings ----------
+\usepackage{titlesec}
+\titleformat{\section}
+  {\sffamily\Large\bfseries\color{ink}}{\thesection}{0.75em}{}
+\titleformat{\subsection}
+  {\sffamily\large\bfseries\color{ink}}{\thesubsection}{0.75em}{}
+\titleformat{\subsubsection}
+  {\sffamily\normalsize\bfseries\color{ink}}{\thesubsubsection}{0.75em}{}
+
+% ---------- Lists ----------
+\usepackage{enumitem}
+\setlist[itemize]{topsep=4pt,itemsep=2pt,leftmargin=*}
+\setlist[enumerate]{topsep=4pt,itemsep=2pt,leftmargin=*}
+
+% ---------- Modern boxes ----------
+\usepackage[most]{tcolorbox}
+\tcbset{
+  enhanced,
+  boxrule=0.6pt,
+  colframe=line,
+  colback=panel,
+  arc=8pt,
+  left=10pt,right=10pt,top=8pt,bottom=8pt
+}
+
+% ---------- Code (minted only) ----------
+\usepackage{minted}
+\setminted{
+  style=monokai,
+  bgcolor=codebg,
+  fontsize=\small,
+  linenos,
+  breaklines,
+  autogobble
+}
+
+% ---------- Custom tcolorbox wrappers ----------
+\newtcolorbox{cmd}[1][]{%
+  title={\sffamily\bfseries Command%
+    \if\relax\detokenize{#1}\relax\else\ — #1\fi},
+  coltitle=ink,
+  colback=panel,
+  colframe=line
+}
+
+\newtcolorbox{out}[1][]{%
+  title={\sffamily\bfseries Output%
+    \if\relax\detokenize{#1}\relax\else\ — #1\fi},
+  coltitle=ink,
+  colback=panel,
+  colframe=line
+}
+
+% ---------- Header / Footer ----------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{14pt}
+\lhead{\textcolor{muted}{MongoDB Indexing Lab}}
+\rhead{\textcolor{muted}{\today}}
+\cfoot{\textcolor{muted}{\thepage}}
+
+% ---------- Title ----------
+\usepackage{titling}
+\pretitle{\vspace{-1.0cm}\color{ink}\LARGE\sffamily\bfseries}
+\posttitle{\par\vspace{0.15cm}\color{sub}\large\sffamily}
+\preauthor{\color{sub}\normalsize\sffamily}
+\postauthor{\par}
+\predate{\color{muted}\normalsize\sffamily}
+\postdate{\par\vspace{0.6cm}\hrule\vspace{0.8cm}}
+
+\title{Indexing and Query Performance in MongoDB}
+\author{Nuria Arroyo \quad \texttt{(173605)}}
+\date{MongoDB Compass + Atlas \; \textbullet \; Database \texttt{tp1}, Collection \texttt{restaurantes}}
+
+
+\begin{document}
+\maketitle
+
+\begin{tcolorbox}
+\textbf{Objective.} Explore the impact of indexing on query performance in MongoDB. We run baseline queries without indexes, inspect execution plans using \texttt{explain}, create the required indexes, re-run the same queries, and compare performance metrics. Finally, we drop the indexes and observe the regression.
+\end{tcolorbox}
+
+\section{Environment}
+\begin{itemize}
+  \item Platform: MongoDB Atlas (cloud) + MongoDB Compass (mongosh inside Compass)
+  \item Database: \texttt{tp1}
+  \item Collection: \texttt{restaurantes}
+  \item Dataset size (approx.): \underline{\hspace{3cm}} documents
+\end{itemize}
+
+\section{Procedure (Assignment Instructions)}
+\begin{enumerate}
+  \item Execute queries \textbf{without indexes} and observe performance using \texttt{explain}.
+  \item Create the specified indexes (Section 3.5).
+  \item View / verify indexes.
+  \item Execute the same queries \textbf{with indexes} and observe changes.
+  \item Compare and analyze results.
+  \item Delete indexes and re-check query performance.
+\end{enumerate}
+\newpage
+
+\section{Step 1 — Baseline: queries without indexes}
+\subsection{Confirm existing indexes}
+\begin{cmd}[Verify index state (baseline)]
+\begin{minted}{javascript}
+use tp1
+db.restaurantes.getIndexes()
+\end{minted}
+\end{cmd}
+
+\begin{out}[Paste your output here]
+\begin{minted}[linenos=false]{text}
+% Example:
+% [ { v: 2, key: { _id: 1 }, name: '_id_' } ]
+\end{minted}
+\end{out}
+
+\subsection{Baseline query: all Italian restaurants}
+\begin{cmd}[Explain with execution stats (baseline)]
+\begin{minted}{javascript}
+db.restaurantes.find({ cuisine: "Italian" }).explain("executionStats")
+\end{minted}
+\end{cmd}
+
+\begin{out}[Paste your explain output here]
+\begin{minted}[linenos=false]{text}
+% Paste the full explain("executionStats") output here
+\end{minted}
+\end{out}
+
+\subsection{Baseline notes}
+From the explain output, record:
+\begin{itemize}
+  \item Winning plan stage (expected: \texttt{COLLSCAN} without an index on \texttt{cuisine})
+  \item \texttt{nReturned}
+  \item \texttt{totalDocsExamined}
+  \item \texttt{totalKeysExamined}
+  \item \texttt{executionTimeMillis}
+\end{itemize}
+
+\begin{tcolorbox}
+\textbf{Baseline summary (fill in).}\\
+Winning plan: \underline{\hspace{5.5cm}} \\
+nReturned: \underline{\hspace{3.5cm}} \quad
+Docs examined: \underline{\hspace{3.5cm}} \\
+Keys examined: \underline{\hspace{3.5cm}} \quad
+Time (ms): \underline{\hspace{3.5cm}}
+\end{tcolorbox}
+
+\section{Step 2 — Create indexes (Section 3.5)}
+\subsection{Q20: increasing index on \texttt{cuisine}}
+\begin{cmd}[Create single-field index]
+\begin{minted}{javascript}
+db.restaurantes.createIndex({ cuisine: 1 })
+\end{minted}
+\end{cmd}
+
+\begin{out}[Paste output (index name)]
+\begin{minted}[linenos=false]{text}
+% Example:
+% cuisine_1
+\end{minted}
+\end{out}
+
+\subsection{Q21: compound index (\texttt{cuisine} asc, \texttt{address.zipcode} desc)}
+\begin{cmd}[Create compound index]
+\begin{minted}{javascript}
+db.restaurantes.createIndex({ cuisine: 1, "address.zipcode": -1 })
+\end{minted}
+\end{cmd}
+
+\begin{out}[Paste output (index name)]
+\begin{minted}[linenos=false]{text}
+% Example:
+% cuisine_1_address.zipcode_-1
+\end{minted}
+\end{out}
+
+\section{Step 3 — View indexes}
+\begin{cmd}[Verify indexes created]
+\begin{minted}{javascript}
+db.restaurantes.getIndexes()
+\end{minted}
+\end{cmd}
+
+\begin{out}[Paste output]
+\begin{minted}[linenos=false]{text}
+% Paste the output here
+\end{minted}
+\end{out}
+
+\section{Step 4 — Re-run queries with indexes}
+\subsection{Italian restaurants query (with indexes)}
+\begin{cmd}[Explain with execution stats (indexed)]
+\begin{minted}{javascript}
+db.restaurantes.find({ cuisine: "Italian" }).explain("executionStats")
+\end{minted}
+\end{cmd}
+
+\begin{out}[Paste explain output]
+\begin{minted}[linenos=false]{text}
+% Paste the full explain("executionStats") output here
+\end{minted}
+\end{out}
+
+\begin{tcolorbox}
+\textbf{Indexed summary (fill in).}\\
+Winning plan: \underline{\hspace{5.5cm}} \\
+nReturned: \underline{\hspace{3.5cm}} \quad
+Docs examined: \underline{\hspace{3.5cm}} \\
+Keys examined: \underline{\hspace{3.5cm}} \quad
+Time (ms): \underline{\hspace{3.5cm}}
+\end{tcolorbox}
+
+\section{Step 5 — Analysis}
+\subsection{Comparison table}
+\begin{tcolorbox}
+\begin{tabular}{p{4.2cm}p{5.0cm}p{5.0cm}}
+\textbf{Metric} & \textbf{Baseline (no index)} & \textbf{With index} \\
+\hline
+Winning plan stage & \underline{\hspace{4.5cm}} & \underline{\hspace{4.5cm}} \\
+nReturned & \underline{\hspace{4.5cm}} & \underline{\hspace{4.5cm}} \\
+Docs examined & \underline{\hspace{4.5cm}} & \underline{\hspace{4.5cm}} \\
+Keys examined & \underline{\hspace{4.5cm}} & \underline{\hspace{4.5cm}} \\
+Execution time (ms) & \underline{\hspace{4.5cm}} & \underline{\hspace{4.5cm}} \\
+\end{tabular}
+\end{tcolorbox}
+
+\subsection{Discussion}
+Write 4--8 sentences interpreting the differences. Mention whether the plan changed from
+\texttt{COLLSCAN} to \texttt{IXSCAN}, and how \texttt{totalDocsExamined} and time changed.
+
+\vspace{2.2cm}
+
+\section{Step 6 — Delete indexes and re-check}
+\subsection{Drop created indexes}
+\begin{cmd}[Drop indexes (replace names with your actual index names)]
+\begin{minted}{javascript}
+db.restaurantes.dropIndex("cuisine_1")
+db.restaurantes.dropIndex("cuisine_1_address.zipcode_-1")
+\end{minted}
+\end{cmd}
+
+\begin{out}[Paste output]
+\begin{minted}[linenos=false]{text}
+% Paste output of dropIndex commands here
+\end{minted}
+\end{out}
+
+\subsection{Explain again after dropping}
+\begin{cmd}[Explain after dropping indexes]
+\begin{minted}{javascript}
+db.restaurantes.find({ cuisine: "Italian" }).explain("executionStats")
+\end{minted}
+\end{cmd}
+
+\begin{out}[Paste explain output]
+\begin{minted}[linenos=false]{text}
+% Paste output here
+\end{minted}
+\end{out}
+
+\subsection{Post-drop discussion}
+Write 2--5 sentences describing what changed (plan stage, docs examined, time).
+
+\vspace{2.0cm}
+
+\end{document}
