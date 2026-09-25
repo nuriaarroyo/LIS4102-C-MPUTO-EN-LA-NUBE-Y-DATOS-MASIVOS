@@ -1,0 +1,22 @@
+This is XeTeX, Version 3.141592653-2.6-0.999997 (MiKTeX 25.4) (preloaded format=xelatex 2026.1.16)  25 FEB 2026 23:14
+entering extended mode
+ \write18 enabled.
+ %&-line parsing enabled.
+**./v2.tex
+(v2.tex
+LaTeX2e <2025-11-01>
+L3 programming layer <2025-10-24>
+)
+*
+(Please type a command or say `\end')
+*run
+
+! LaTeX Error: Missing \begin{document}.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+<*> r
+     un
+? 

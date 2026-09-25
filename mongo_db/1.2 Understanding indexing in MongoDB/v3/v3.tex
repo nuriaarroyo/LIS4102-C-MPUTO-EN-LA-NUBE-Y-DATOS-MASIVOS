@@ -1,0 +1,420 @@
+\documentclass[11pt, letterpaper]{article}
+
+% ---------- Packages ----------
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+% Safe, widely-available fonts for pdfLaTeX
+\usepackage{lmodern}        % clean text font
+\usepackage{inconsolata}    % nicer monospace (optional but usually available)
+
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage[most]{tcolorbox}
+\usepackage{listings}
+\usepackage{amssymb} % provides \checkmark
+
+% ---------- Colors (Modern Slate Palette) ----------
+\definecolor{brandblue}{HTML}{2563EB}
+\definecolor{dark}{HTML}{1E293B}
+\definecolor{slate}{HTML}{64748B}
+\definecolor{back}{HTML}{F8FAFC}
+\definecolor{code-bg}{HTML}{1E1E1E}
+
+% ---------- Code Styling ----------
+\lstset{
+    backgroundcolor=\color{code-bg},
+    basicstyle=\small\ttfamily\color{orange},
+    identifierstyle=\color{orange},
+    breaklines=true,
+    breakatwhitespace=false,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false,
+    captionpos=b,
+    commentstyle=\color{gray},
+    keywordstyle=\color{cyan},
+    stringstyle=\color{green},
+    frame=none,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    xleftmargin=15pt,
+    literate=
+ {0}{{\color{cyan}0}}1
+ {1}{{\color{cyan}1}}1
+ {2}{{\color{cyan}2}}1
+ {3}{{\color{cyan}3}}1
+ {4}{{\color{cyan}4}}1
+ {5}{{\color{cyan}5}}1
+ {6}{{\color{cyan}6}}1
+ {7}{{\color{cyan}7}}1
+ {8}{{\color{cyan}8}}1
+ {9}{{\color{cyan}9}}1
+ {\{}{{\color{white}\{}}1
+ {\}}{{\color{white}\}}}1
+ {[}{{\color{white}[}}1
+ {]}{{\color{white}]}}1
+ {(}{{\color{white}(}}1
+ {)}{{\color{white})}}1
+ {:}{{\color{white}:}}1
+ {,}{{\color{white},}}1
+ {.}{{\color{white}.}}1
+}
+
+% ---------- Header Styling ----------
+\titleformat{\section}{\large\bfseries\sffamily\color{dark}}{\thesection}{1em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries\sffamily\color{brandblue}}{\thesubsection}{1em}{}
+
+% ---------- Custom Boxes ----------
+\newtcolorbox{labstep}[1]{
+    breakable,
+    colback=brandblue!5,
+    colframe=brandblue,
+    fonttitle=\bfseries\sffamily,
+    title=#1,
+    arc=4pt,
+    left=10pt,
+    right=10pt
+}
+
+% ---------- Document Info ----------
+\title{\vspace{-1.2cm}\sffamily\Huge\bfseries MongoDB Indexing Lab}
+\author{\sffamily Nuria Arroyo \textbullet\ ID: 173605}
+\date{\sffamily \today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\noindent
+This lab analyzes the performance impact of indexing within MongoDB Atlas.
+By comparing \texttt{COLLSCAN} (collection scan) vs.\ \texttt{IXSCAN} (index scan),
+we quantify efficiency gains in query execution time and resource utilization.
+\end{abstract}
+
+\section{Environment Setup}
+\begin{itemize}[label=\textcolor{brandblue}{\checkmark}]
+    \item \textbf{Platform:} MongoDB Atlas + Compass
+    \item \textbf{Dattabase:} \texttt{tp1}
+    \item \textbf{Collection:} \texttt{restaurantes}
+\end{itemize}
+
+\section{Procedure (Assignment Instructions)}
+\begin{enumerate}
+  \item Execute queries \textbf{without indexes} and observe performance using \texttt{explain}.
+  \item Create the specified indexes (Section 3.5).
+  \item View / verify indexes.
+  \item Execute the same queries \textbf{with indexes} and observe changes.
+  \item Compare and analyze results.
+  \item Delete indexes and re-check query performance.
+\end{enumerate}
+\newpage
+
+\section{Step 1 — Baseline: queries without indexes}
+Before making the query we verify the existing indexes on the collection.
+
+\begin{labstep}{Command: Verify index state (baseline)}
+\begin{lstlisting}[language=Java]
+// MongoDB shell / mongosh
+db.restaurantes.getIndexes()
+\end{lstlisting}
+\end{labstep}
+
+\begin{labstep}{Output:}
+\begin{lstlisting}[language=Java]
+// MongoDB shell / mongosh
+{ v: 2, key: { _id: 1 }, name: '_id_' }
+\end{lstlisting}
+\end{labstep}
+
+No indeex beside the default \texttt{\_id\_} index exists at this point.
+
+Now we run the query to find all Italian restaurants and explain it with execution stats.
+\begin{labstep}{Command: query all Italian restaurants with explain}
+\begin{lstlisting}[language=Java]
+// MongoDB shell / mongosh
+db.restaurantes.find({ cuisine: "Italian" }).explain("executionStats")
+\end{lstlisting}
+\end{labstep}
+
+Here we may observe the full explain output.
+
+\begin{labstep}{Output: Paste your output here}
+\begin{lstlisting}[language=Java]
+// MongoDB shell / mongosh
+{
+  explainVersion: '1',
+  queryPlanner: {
+    namespace: 'tp1.restaurantes',
+    parsedQuery: {
+      cuisine: {
+        '$eq': 'Italian'
+      }
+    },
+    indexFilterSet: false,
+    queryHash: '98FD4995',
+    planCacheShapeHash: '98FD4995',
+    planCacheKey: '1DC1C771',
+    optimizationTimeMillis: 0,
+    maxIndexedOrSolutionsReached: false,
+    maxIndexedAndSolutionsReached: false,
+    maxScansToExplodeReached: false,
+    prunedSimilarIndexes: false,
+    winningPlan: {
+      isCached: false,
+      stage: 'COLLSCAN',
+      filter: {
+        cuisine: {
+          '$eq': 'Italian'
+        }
+      },
+      direction: 'forward'
+    },
+    rejectedPlans: []
+  },
+  executionStats: {
+    executionSuccess: true,
+    nReturned: 1070,
+    executionTimeMillis: 26,
+    totalKeysExamined: 0,
+    totalDocsExamined: 25356,
+    executionStages: {
+      isCached: false,
+      stage: 'COLLSCAN',
+      filter: {
+        cuisine: {
+          '$eq': 'Italian'
+        }
+      },
+      nReturned: 1070,
+      executionTimeMillisEstimate: 21,
+      works: 25357,
+      advanced: 1070,
+      needTime: 24286,
+      needYield: 0,
+      saveState: 1,
+      restoreState: 1,
+      isEOF: 1,
+      direction: 'forward',
+      docsExamined: 25356
+    }
+  },
+  ok: 1
+}
+\end{lstlisting}
+\end{labstep}
+
+\subsection{Execution Results}
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Winning Plan Stage & COLLSCAN \\
+Execution Time (ms) & 26 \\
+Docs Examined & 25356 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Baseline notes}
+From the explain output, record:
+\begin{itemize}
+  \item Winning plan stage (expected: \texttt{COLLSCAN} without an index on \texttt{cuisine})
+  \item \texttt{nReturned}
+  \item \texttt{totalDocsExamined}
+  \item \texttt{totalKeysExamined}
+  \item \texttt{executionTimeMillis}
+\end{itemize}
+
+\begin{tcolorbox}
+\textbf{Baseline summary (fill in).}\\
+Winning plan: COLLSCAN\\
+nReturned: 1070 \quad
+Docs examined: 25356\\
+Keys examined: 0 \quad
+Time (ms): 26
+\end{tcolorbox}
+\newpage
+
+\section{Step 2 — Create indexes (Section 3.5)}
+\subsection{Q20: increasing index on \texttt{cuisine}}
+
+\begin{labstep}{Command: Create single-field index on \texttt{cuisine}}
+\begin{lstlisting}[language=Java]
+// MongoDB shell / mongosh
+db.restaurantes.createIndex({ cuisine: 1 })
+\end{lstlisting}
+\end{labstep}
+
+\begin{labstep}{Output:}
+\begin{lstlisting}[language=Java]
+// MongoDB shell / mongosh
+cuisine_1
+\end{lstlisting}
+\end{labstep}
+
+\subsection{Q21: compound index (\texttt{cuisine} asc, \texttt{address.zipcode} desc)}
+
+\begin{labstep}{Command: Create compound index on \texttt{cuisine} and \texttt{address.zipcode}}
+\begin{lstlisting}[language=Java]
+// MongoDB shell / mongosh
+db.restaurantes.createIndex({ cuisine: 1, "address.zipcode": -1 })
+\end{lstlisting}
+\end{labstep}
+
+\begin{labstep}{Output:}
+\begin{lstlisting}[language=Java]
+// MongoDB shell / mongosh
+cuisine_1_address.zipcode_-1
+\end{lstlisting}
+\end{labstep}
+
+\section{Step 3 — View indexes}
+
+\begin{labstep}{Command: Verify indexes created}
+\begin{lstlisting}[language=Java]
+// MongoDB shell / mongosh
+db.restaurantes.getIndexes()
+\end{lstlisting}
+\end{labstep}
+
+\begin{labstep}{Output:}
+\begin{lstlisting}[language=Java]
+// MongoDB shell / mongosh
+[
+  { v: 2, key: { _id: 1 }, name: '_id_' },
+  { v: 2, key: { cuisine: 1 }, name: 'cuisine_1' },
+  {
+    v: 2,
+    key: { cuisine: 1, 'address.zipcode': -1 },
+    name: 'cuisine_1_address.zipcode_-1'
+  }
+]
+\end{lstlisting}
+\end{labstep}
+
+\section{Step 4 — Re-run queries with indexes}
+\subsection{Italian restaurants query (with indexes)}
+
+\begin{labstep}{Command: Explain with execution stats (indexed)}
+\begin{lstlisting}[language=Java]
+// MongoDB shell / mongosh
+db.restaurantes.find({ cuisine: "Italian" }).explain("executionStats")
+\end{lstlisting}
+\end{labstep}
+
+\begin{labstep}{Output:}
+\begin{lstlisting}[language=Java]
+// MongoDB shell / mongosh
+{
+  explainVersion: '1',
+  queryPlanner: {
+    winningPlan: {
+      stage: 'FETCH',
+      inputStage: {
+        stage: 'IXSCAN',
+        indexName: 'cuisine_1'
+      }
+    }
+  },
+  executionStats: {
+    executionSuccess: true,
+    nReturned: 1070,
+    executionTimeMillis: 12,
+    totalKeysExamined: 1070,
+    totalDocsExamined: 1070
+  },
+  ok: 1
+}
+\end{lstlisting}
+\end{labstep}
+
+\begin{tcolorbox}
+\textbf{Indexed summary (fill in).}\\
+Winning plan: FETCH (IXSCAN on cuisine\_1)\\
+nReturned: 1070 \quad
+Docs examined: 1070\\
+Keys examined: 1070 \quad
+Time (ms): 12
+\end{tcolorbox}
+
+\section{Step 5 — Analysis}
+\subsection{Comparison table}
+\begin{tcolorbox}
+\begin{tabular}{p{4.2cm}p{5.0cm}p{5.0cm}}
+\textbf{Metric} & \textbf{Baseline (no index)} & \textbf{With index} \\
+\hline
+Winning plan stage & COLLSCAN & FETCH $\rightarrow$ IXSCAN (cuisine\_1) \\
+nReturned & 1070 & 1070 \\
+Docs examined & 25356 & 1070 \\
+Keys examined & 0 & 1070 \\
+Execution time (ms) & 26 & 12 \\
+\end{tabular}
+\end{tcolorbox}
+
+\subsection{Discussion}
+The baseline query execution without an index resulted in a \texttt{COLLSCAN} winning plan, meaning the database performed a full collection scan. In this scenario, MongoDB examined all 25,356 documents in the collection in order to return 1,070 matching documents. No index keys were examined, and the execution time was 26 ms.
+
+After creating the index on \texttt{cuisine}, the winning plan changed to \texttt{IXSCAN} (with a \texttt{FETCH} stage). This indicates that MongoDB used the index to directly locate matching documents instead of scanning the entire collection. The number of examined documents decreased dramatically from 25,356 to 1,070, exactly matching the number of returned documents. Additionally, 1,070 index keys were examined, and execution time decreased to 12 ms.
+
+This demonstrates a significant improvement in query efficiency. The index reduced unnecessary document scans, lowered resource utilization, and improved response time. The change from \texttt{COLLSCAN} to \texttt{IXSCAN} confirms that indexing optimizes selective queries by narrowing the search space to only relevant entries.
+
+\vspace{2.2cm}
+
+\section{Step 6 — Delete indexes and re-check}
+\subsection{Drop created indexes}
+\begin{labstep}{Drop indexes (replace names with your actual index names)}
+\begin{lstlisting}
+// MongoDB shell / mongosh
+db.restaurantes.dropIndex("cuisine_1")
+db.restaurantes.dropIndex("cuisine_1_address.zipcode_-1")
+\end{lstlisting}
+\end{labstep}
+
+\begin{labstep}{Output:}
+\begin{lstlisting}
+// MongoDB shell / mongosh
+{
+  nIndexesWas: 2,
+  ok: 1
+}
+\end{lstlisting}
+\end{labstep}
+
+\subsection{Explain again after dropping}
+\begin{labstep}{Explain after dropping indexes}
+\begin{lstlisting}
+// MongoDB shell / mongosh
+db.restaurantes.find({ cuisine: "Italian" }).explain("executionStats")
+\end{lstlisting}
+\end{labstep}
+
+\begin{labstep}{Paste explain output}
+\begin{lstlisting}
+// MongoDB shell / mongosh
+{
+  queryPlanner: { winningPlan: { stage: 'COLLSCAN' } },
+  executionStats: {
+    nReturned: 1070,
+    executionTimeMillis: 9,
+    totalKeysExamined: 0,
+    totalDocsExamined: 25356
+  },
+  ok: 1
+}
+\end{lstlisting}
+\end{labstep}
+
+\subsection{Post-drop discussion}
+Overall, the experiment clearly demonstrates the impact of indexing on query performance in MongoDB. Without an index, the database performs a full collection scan, examining every document regardless of relevance. With an index, the query planner switches to an index scan, drastically reducing the number of examined documents and improving efficiency. Removing the index restores the original full-scan behavior. Therefore, proper index design is essential for optimizing query performance, especially in large datasets.
+
+\vspace{2.0cm}
+
+\end{document}

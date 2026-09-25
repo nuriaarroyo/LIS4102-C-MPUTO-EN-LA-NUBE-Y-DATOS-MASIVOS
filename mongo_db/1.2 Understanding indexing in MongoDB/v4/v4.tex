@@ -1,0 +1,176 @@
+\documentclass[11pt]{article}
+
+% ---------- Page ----------
+\usepackage[margin=1in]{geometry}
+
+% ---------- Engine-safe fonts (XeLaTeX / LuaLaTeX) ----------
+\usepackage{fontspec}
+\setmainfont{Latin Modern Roman}
+\setsansfont{Latin Modern Sans}
+\setmonofont{Inconsolata}
+
+% ---------- Typography ----------
+\usepackage{microtype}
+\usepackage{setspace}
+\setstretch{1.08}
+
+% ---------- Links ----------
+\usepackage[hidelinks]{hyperref}
+
+% ---------- Colors ----------
+\usepackage{xcolor}
+\definecolor{ink}{HTML}{111827}
+\definecolor{sub}{HTML}{374151}
+\definecolor{muted}{HTML}{6B7280}
+\definecolor{line}{HTML}{E5E7EB}
+\definecolor{panel}{HTML}{F9FAFB}
+\definecolor{accent}{HTML}{2563EB}
+\definecolor{codebg}{HTML}{111827}
+
+% ---------- Headings ----------
+\usepackage{titlesec}
+\titleformat{\section}
+  {\sffamily\Large\bfseries\color{ink}}{\thesection}{0.75em}{}
+\titleformat{\subsection}
+  {\sffamily\large\bfseries\color{ink}}{\thesubsection}{0.75em}{}
+\titleformat{\subsubsection}
+  {\sffamily\normalsize\bfseries\color{ink}}{\thesubsubsection}{0.75em}{}
+
+% ---------- Lists ----------
+\usepackage{enumitem}
+\setlist[itemize]{topsep=4pt,itemsep=2pt,leftmargin=*}
+\setlist[enumerate]{topsep=4pt,itemsep=2pt,leftmargin=*}
+
+% ---------- Modern boxes ----------
+\usepackage[most]{tcolorbox}
+\tcbset{
+  enhanced,
+  boxrule=0.6pt,
+  colframe=line,
+  colback=panel,
+  arc=8pt,
+  left=10pt,right=10pt,top=8pt,bottom=8pt
+}
+
+% ---------- Code (minted) ----------
+\usepackage{minted}
+\setminted{
+  style=monokai,
+  bgcolor=codebg,
+  fontsize=\small,
+  linenos,
+  breaklines,
+  autogobble
+}
+
+% ---------- Custom code/output boxes ----------
+\newtcolorbox{cmd}[1][]{%
+  title={\sffamily\bfseries Command%
+    \if\relax\detokenize{#1}\relax\else\ — #1\fi},
+  coltitle=ink,
+  colback=panel,
+  colframe=line
+}
+
+\newtcolorbox{out}[1][]{%
+  title={\sffamily\bfseries Output%
+    \if\relax\detokenize{#1}\relax\else\ — #1\fi},
+  coltitle=ink,
+  colback=panel,
+  colframe=line
+}
+
+% ---------- Header / Footer ----------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{14pt}
+\lhead{\textcolor{muted}{MongoDB Indexing Lab}}
+\rhead{\textcolor{muted}{\today}}
+\cfoot{\textcolor{muted}{\thepage}}
+
+% ---------- Title ----------
+\usepackage{titling}
+\pretitle{\vspace{-1.0cm}\color{ink}\LARGE\sffamily\bfseries}
+\posttitle{\par\vspace{0.15cm}\color{sub}\large\sffamily}
+\preauthor{\color{sub}\normalsize\sffamily}
+\postauthor{\par}
+\predate{\color{muted}\normalsize\sffamily}
+\postdate{\par\vspace{0.6cm}\hrule\vspace{0.8cm}}
+
+\title{Indexing and Query Performance in MongoDB}
+\author{Nuria Arroyo \quad \texttt{(173605)}}
+\date{MongoDB Compass + Atlas \; \textbullet \; Database \texttt{tp1}, Collection \texttt{restaurantes}}
+
+\begin{document}
+\maketitle
+
+\begin{tcolorbox}
+\textbf{Objective.} Explore the impact of indexing on query performance in MongoDB. We run baseline queries without indexes, inspect execution plans using \texttt{explain}, create the required indexes, re-run the same queries, and compare performance metrics. Finally, we drop the indexes and observe the regression.
+\end{tcolorbox}
+
+\section{Environment}
+\begin{itemize}
+  \item Platform: MongoDB Atlas + MongoDB Compass
+  \item Database: \texttt{tp1}
+  \item Collection: \texttt{restaurantes}
+  \item Dataset size (approx.): \underline{\hspace{3cm}} documents
+\end{itemize}
+
+\section{Procedure (Assignment Instructions)}
+\begin{enumerate}
+  \item Execute queries \textbf{without indexes} and observe performance using \texttt{explain}.
+  \item Create the specified indexes (Section 3.5).
+  \item View / verify indexes.
+  \item Execute the same queries \textbf{with indexes} and observe changes.
+  \item Compare and analyze results.
+  \item Delete indexes and re-check query performance.
+\end{enumerate}
+
+\newpage
+
+\section{Step 1 — Baseline: queries without indexes}
+\subsection{Confirm existing indexes}
+\begin{cmd}[Verify index state (baseline)]
+\begin{minted}{javascript}
+use tp1
+db.restaurantes.getIndexes()
+\end{minted}
+\end{cmd}
+
+\begin{out}[Paste your output here]
+\begin{minted}[linenos=false]{text}
+% Paste output here
+\end{minted}
+\end{out}
+
+\subsection{Baseline query: all Italian restaurants}
+\begin{cmd}[Explain with execution stats (baseline)]
+\begin{minted}{javascript}
+db.restaurantes.find({ cuisine: "Italian" }).explain("executionStats")
+\end{minted}
+\end{cmd}
+
+\begin{out}[Paste your explain output here]
+\begin{minted}[linenos=false]{text}
+% Paste explain output here
+\end{minted}
+\end{out}
+
+\section{Step 2 — Create indexes (Section 3.5)}
+\begin{cmd}[Create indexes]
+\begin{minted}{javascript}
+db.restaurantes.createIndex({ cuisine: 1 })
+db.restaurantes.createIndex({ cuisine: 1, "address.zipcode": -1 })
+\end{minted}
+\end{cmd}
+
+\section{Step 6 — Delete indexes and re-check}
+\begin{cmd}[Drop indexes]
+\begin{minted}{javascript}
+db.restaurantes.dropIndex("cuisine_1")
+db.restaurantes.dropIndex("cuisine_1_address.zipcode_-1")
+\end{minted}
+\end{cmd}
+
+\end{document}
